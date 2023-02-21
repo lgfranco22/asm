@@ -1,0 +1,22 @@
+
+nasm -f elf32 file.asm
+ld -entry _main -m elf_i386 file.o -o file
+
+nasm -f elf64 file.asm
+ld -entry _main file.o -o file 
+# aqui nao passamos a arquitetura, pois o sistema tende a compilar na sua propria arquitetura (na caso x64)
+
+# opcional
+objdump -d -M intel file.o
+
+
+# man 2 write (ver como usa a funcao write)
+
+
+# gdb -tui
+# setar breakpoint
+run
+set disassembly-flavor intel
+disas
+layout asm
+layout regs
